@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import {
   calculateCIDR,
   isValidIP,
@@ -71,17 +71,6 @@ const resultLabels = [
   { label: "Count", icon: "🔢", key: "totalHosts" },
 ];
 
-const subnetColors = [
-  "bg-blue-100 border-blue-200 text-blue-800",
-  "bg-green-100 border-green-200 text-green-800",
-  "bg-purple-100 border-purple-200 text-purple-800",
-  "bg-orange-100 border-orange-200 text-orange-800",
-  "bg-teal-100 border-teal-200 text-teal-800",
-  "bg-pink-100 border-pink-200 text-pink-800",
-  "bg-yellow-100 border-yellow-200 text-yellow-800",
-  "bg-red-100 border-red-200 text-red-800",
-];
-
 const binaryOctetColors = [
   "bg-blue-100 text-blue-800 border-blue-200",
   "bg-green-100 text-green-800 border-green-200",
@@ -89,14 +78,13 @@ const binaryOctetColors = [
   "bg-orange-100 text-orange-800 border-orange-200",
 ];
 
-export default function Home() {
+function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [ipAddress, setIpAddress] = useState('');
   const [prefixLength, setPrefixLength] = useState(24);
   const [result, setResult] = useState<CIDRInfo | null>(null);
-  const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
 
   // Read from URL on mount
@@ -119,22 +107,15 @@ export default function Home() {
   }, [ipAddress, prefixLength]);
 
   useEffect(() => {
-    setError("");
     setResult(null);
     if (!isValidIP(ipAddress)) {
-      setError("Please enter a valid IP address (e.g., 192.168.1.1)");
       return;
     }
     if (!isValidPrefixLength(prefixLength)) {
-      setError("Prefix length must be between 0 and 32");
       return;
     }
-    try {
-      const cidrInfo = calculateCIDR(ipAddress, prefixLength);
-      setResult(cidrInfo);
-    } catch (err) {
-      setError("An error occurred while calculating CIDR information");
-    }
+    const cidrInfo = calculateCIDR(ipAddress, prefixLength);
+    setResult(cidrInfo);
   }, [ipAddress, prefixLength]);
 
   const handleCopy = (text: string, label: string) => {
@@ -288,5 +269,13 @@ export default function Home() {
         .font-jetbrains-mono { font-family: var(--font-jetbrains-mono), monospace; }
       `}</style>
     </main>
+  );
+}
+
+export default function PageWrapper() {
+  return (
+    <Suspense>
+      <Home />
+    </Suspense>
   );
 }
