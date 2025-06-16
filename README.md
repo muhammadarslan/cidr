@@ -1,7 +1,6 @@
 # CIDR Calculator
 
 A modern, visual, and educational CIDR calculator built with Next.js. Instantly calculate and visualize network information from any IPv4 address and prefix.
-
 ---
 
 ## What is CIDR?
