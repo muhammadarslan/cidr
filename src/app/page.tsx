@@ -78,6 +78,31 @@ const binaryOctetColors = [
   "bg-orange-100 text-orange-800 border-orange-200",
 ];
 
+const octetBitColors = [
+  'bg-blue-400 text-white',
+  'bg-green-400 text-white',
+  'bg-purple-400 text-white',
+  'bg-orange-400 text-white',
+];
+const octetLabelColors = [
+  'text-blue-500',
+  'text-green-500',
+  'text-purple-500',
+  'text-orange-500',
+];
+
+// Tooltip component
+function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
+  return (
+    <span className="relative group cursor-pointer">
+      {children}
+      <span className="absolute left-1/2 -translate-x-1/2 mt-2 z-20 hidden group-hover:block group-focus:block bg-slate-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg font-sans min-w-max">
+        {text}
+      </span>
+    </span>
+  );
+}
+
 function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -185,15 +210,82 @@ function Home() {
         {/* Results */}
         {result && (
           <div className="w-full mt-8 animate-fade-in-up overflow-x-auto">
+            {/* Interactive Visualization Bar */}
+            <div className="w-full max-w-5xl mx-auto mb-10 flex flex-col items-center">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-lg font-bold font-montserrat text-slate-700">Network/Host Bits Visualization</h3>
+                <Tooltip text="This bar shows how many bits are used for the network (blue) and for hosts (gray) in your subnet.">
+                  <span className="text-blue-500 text-base align-middle ml-1">ℹ️</span>
+                </Tooltip>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex h-8 rounded-lg overflow-hidden border border-slate-200 shadow-sm" style={{ width: 32 * 14 }}>
+                  <div
+                    className="bg-blue-400 flex items-center justify-center text-xs text-white font-bold h-full transition-all duration-300"
+                    style={{ width: `${result.networkBits * 14}px` }}
+                  >
+                    {result.networkBits > 4 ? <span className="ml-2">Network ({result.networkBits})</span> : null}
+                  </div>
+                  <div
+                    className="bg-slate-200 flex items-center justify-center text-xs text-slate-700 font-bold h-full transition-all duration-300"
+                    style={{ width: `${result.hostBits * 14}px` }}
+                  >
+                    {result.hostBits > 4 ? <span className="ml-2">Host ({result.hostBits})</span> : null}
+                  </div>
+                </div>
+                <span className="text-xs text-slate-500 font-mono">/32</span>
+              </div>
+            </div>
+            {/* Bitwise Mask Visualization */}
+            <div className="w-full max-w-5xl mx-auto mb-10 flex flex-col items-center">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-lg font-bold font-montserrat text-slate-700">Bitwise Subnet Mask</h3>
+                <Tooltip text="This shows the subnet mask as 32 bits. Blue/colored bits are network bits (1), gray are host bits (0). Each group of 8 bits is an octet.">
+                  <span className="text-blue-500 text-base align-middle ml-1">ℹ️</span>
+                </Tooltip>
+              </div>
+              <div className="flex flex-row gap-2 items-center justify-center" style={{ width: 32 * 14 }}>
+                {Array.from({ length: 4 }).map((_, octetIdx) => (
+                  <div key={octetIdx} className="flex flex-col items-center">
+                    <div className="flex flex-row gap-0.5">
+                      {Array.from({ length: 8 }).map((_, bitIdx) => {
+                        const globalBitIdx = octetIdx * 8 + bitIdx;
+                        const isNetwork = globalBitIdx < result.networkBits;
+                        return (
+                          <span
+                            key={bitIdx}
+                            className={`w-7 h-7 flex items-center justify-center rounded font-jetbrains-mono text-sm font-bold border border-slate-200 ${isNetwork ? octetBitColors[octetIdx] : 'bg-slate-200 text-slate-700'}`}
+                          >
+                            {isNetwork ? 1 : 0}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <span className={`text-xs mt-1 font-mono font-bold ${octetLabelColors[octetIdx]}`}>Octet {octetIdx + 1}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mx-auto">
               {resultLabels.slice(0, 3).map((item, idx) => {
                 const style = resultStyles[idx];
+                // Add tooltips for Netmask, CIDR Base, Broadcast
+                const tooltips = [
+                  "The subnet mask determines which part of the IP address is the network and which is the host.",
+                  "The base IP address of the network (all host bits are 0).",
+                  "The broadcast address is used to send data to all hosts in the network.",
+                ];
                 return (
                   <div
                     key={item.key}
                     className={`flex flex-col items-center justify-center px-8 py-8 rounded-2xl border min-w-[260px] bg-white ${style.bg} ${style.border} shadow-sm`}
                   >
-                    <span className={`text-2xl mb-2`}>{item.icon}</span>
+                    <div className="flex items-center gap-1 mb-2">
+                      <span className="text-2xl">{item.icon}</span>
+                      <Tooltip text={tooltips[idx]}>
+                        <span className="text-blue-500 text-base align-middle ml-1">ℹ️</span>
+                      </Tooltip>
+                    </div>
                     <span className={`text-2xl font-jetbrains-mono font-bold mb-1 ${style.text}`}>{result[item.key as keyof CIDRInfo]}</span>
                     <span className={`text-lg font-bold tracking-wide font-montserrat mt-1 ${style.text}`}>{item.label}</span>
                   </div>
@@ -203,12 +295,23 @@ function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mx-auto mt-6">
               {resultLabels.slice(3, 6).map((item, idx) => {
                 const style = resultStyles[idx + 3];
+                // Add tooltips for First/Last Usable, Count
+                const tooltips = [
+                  "The first usable IP address in the network (usually assigned to a host).",
+                  "The last usable IP address in the network (usually assigned to a host).",
+                  "The total number of usable host addresses in the network.",
+                ];
                 return (
                   <div
                     key={item.key}
                     className={`flex flex-col items-center justify-center px-8 py-8 rounded-2xl border min-w-[260px] bg-white ${style.bg} ${style.border} shadow-sm`}
                   >
-                    <span className={`text-2xl mb-2`}>{item.icon}</span>
+                    <div className="flex items-center gap-1 mb-2">
+                      <span className="text-2xl">{item.icon}</span>
+                      <Tooltip text={tooltips[idx]}>
+                        <span className="text-blue-500 text-base align-middle ml-1">ℹ️</span>
+                      </Tooltip>
+                    </div>
                     <span className={`text-2xl font-jetbrains-mono font-bold mb-1 ${style.text}`}>{item.key === "totalHosts" ? result[item.key].toLocaleString() : result[item.key as keyof CIDRInfo]}</span>
                     <span className={`text-lg font-bold tracking-wide font-montserrat mt-1 ${style.text}`}>{item.label}</span>
                   </div>
